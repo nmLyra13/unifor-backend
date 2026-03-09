@@ -9,6 +9,11 @@ export async function verifyToken(request: FastifyRequest, reply: FastifyReply) 
     }
 
     const idToken = authHeader.split('Bearer ')[1];
+    
+    if(process.env.NODE_ENV !== 'production' && process.env.DEV_TOKEN && idToken == process.env.DEV_TOKEN){
+        (request as any).user = { uid: 'dev-teste-123'};
+        return;
+    }
 
     try {
         const decodedToken = await auth.verifyIdToken(idToken);

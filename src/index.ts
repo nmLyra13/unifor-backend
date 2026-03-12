@@ -3,7 +3,11 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import cors from '@fastify/cors';
 import healthRoutes from './routes/health';
-import itemsRoutes from './routes/items';
+import authRoutes from './routes/auth';
+import disciplinesRoutes from './routes/disciplines';
+import teachersRoutes from './routes/teachers';
+import studentsRoutes from './routes/students';
+import adminRoutes from './routes/admin';
 
 const server = Fastify({
     logger: true
@@ -19,9 +23,9 @@ server.register(cors, {
 server.register(swagger, {
     swagger: {
         info: {
-            title: 'UniProject API',
-            description: 'Documentação da API Backend construída com Fastify',
-            version: '1.0.0'
+            title: 'UniProject API - Sistema Universitário',
+            description: 'Documentação da API Backend com papéis de Admin, Alunos e Professores.',
+            version: '2.0.0'
         },
         host: 'localhost:5000',
         schemes: ['http'],
@@ -43,7 +47,11 @@ server.register(swaggerUi, {
 
 // Resgistro das Rotas
 server.register(healthRoutes);
-server.register(itemsRoutes, { prefix: '/v1' });
+server.register(authRoutes, { prefix: '/v1' });
+server.register(disciplinesRoutes, { prefix: '/v1' });
+server.register(teachersRoutes, { prefix: '/v1' });
+server.register(studentsRoutes, { prefix: '/v1' });
+server.register(adminRoutes, { prefix: '/v1' });
 
 const start = async () => {
     try {

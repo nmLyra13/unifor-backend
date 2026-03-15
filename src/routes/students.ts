@@ -16,7 +16,7 @@ export default async function (fastify: FastifyInstance) {
         }
     }, async (request, reply) => {
         const user = (request as any).user;
-        if (user.role !== 'aluno') return reply.code(403).send({ error: 'Acesso restrito a alunos.' });
+        if (user.role !== 'aluno' && user.role !== 'admin') return reply.code(403).send({ error: 'Acesso restrito a alunos.' });
 
         const { disciplineId } = request.body as any;
         await db.collection('enrollments').add({
@@ -32,7 +32,7 @@ export default async function (fastify: FastifyInstance) {
         schema: { tags: ['Aluno'], description: 'Visualizar o boletim de notas do próprio aluno' }
     }, async (request, reply) => {
         const user = (request as any).user;
-        if (user.role !== 'aluno') return reply.code(403).send({ error: 'Acesso restrito a alunos.' });
+        if (user.role !== 'aluno' && user.role !== 'admin') return reply.code(403).send({ error: 'Acesso restrito a alunos.' });
 
         const snapshot = await db.collection('grades').where('studentId', '==', user.uid).get();
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

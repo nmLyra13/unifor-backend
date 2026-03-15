@@ -1,8 +1,76 @@
 import { FastifyInstance } from 'fastify';
-import { db } from '../plugins/firebase';
+import { db, auth } from '../plugins/firebase';
 import { verifyToken } from '../controllers/authController';
 
 export default async function (fastify: FastifyInstance) {
+  // === CRIAÇÃO/ATUALIZAÇÃO UNIFICADA DE USUÁRIO ===
+  fastify.post('/admin/users', {
+    preHandler: [verifyToken],
+    schema: {
+      tags: ['Admin'],
+      description: 'Gerenciamento: Criar ou definir papel de um usuário por E-mail (Admin). Se a senha não for enviada, ele não tentará criar um Firebase Auth.',
+      body: {
+        type: 'object',
+        required: ['email', 'name', 'role'], // Senha não é mais obrigatória
+        properties: {
+          email: { type: 'string' },
+          password: { type: 'string', description: 'Opcional. Preencha apenas se for criar a conta no Firebase agora.' },
+          name: { type: 'string' },
+          role: { type: 'string', enum: ['aluno', 'professor', 'admin'] }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const user = (request as any).user;
+    if (user.role !== 'admin') {
+        return reply.code(403).send({ error: 'Acesso negado. Apenas administradores podem gerenciar usuários.' });
+    }
+    
+    const { email, password, name, role } = request.body as any;
+    
+    try {
+        let authUid = '';
+
+        // Se a senha foi preenchida, o Admin quer FORÇAR a criação do usuário no Firebase Auth
+        if (password) {
+            const userRecord = await auth.createUser({
+                email,
+                password,
+                displayName: name
+            });
+            authUid = userRecord.uid;
+        } else {
+            // Se NÃO tem senha, significa que o usuário JÁ LOGOU no front-end pelo Google/Email
+            // Então vamos apenas procurar ele no Auth para pegar a ID oficial dele
+            const existingUser = await auth.getUserByEmail(email);
+            authUid = existingUser.uid;
+        }
+        
+        // Agora salva/atualiza no Banco Firestore
+        await db.collection('users').doc(authUid).set({
+            email,
+            name,
+            role,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        // Sincroniza a Role com as Custom Claims do Firebase Auth
+        await auth.setCustomUserClaims(authUid, { role });
+
+        return reply.code(200).send({ 
+            message: `Registro do usuário ${email} concluído com papel de ${role}.`, 
+            uid: authUid,
+            email,
+            role 
+        });
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            return reply.code(404).send({ error: 'Usuário não encontrado no Auth. Envie a senha se quiser criá-lo agora.' });
+        }
+        return reply.code(400).send({ error: error.message || 'Erro ao processar usuário' });
+    }
+  });
+
   // Criação/Atualização geral de um usuário
   fastify.put('/admin/users', {
     preHandler: [verifyToken],
@@ -15,6 +83,7 @@ export default async function (fastify: FastifyInstance) {
         properties: {
           uid: { type: 'string', description: 'ID do Firebase Auth deste usuário' },
           name: { type: 'string' },
+          email: { type: 'string' },
           role: { type: 'string', enum: ['aluno', 'professor', 'admin'] }
         }
       }
@@ -25,13 +94,19 @@ export default async function (fastify: FastifyInstance) {
         return reply.code(403).send({ error: 'Acesso negado. Apenas administradores podem gerenciar usuários.' });
     }
     
-    const { uid, name, role } = request.body as any;
+    const { uid, name, role, email } = request.body as any;
     
-    await db.collection('users').doc(uid).set({
+    const updateData: any = {
       name,
       role,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    };
+    if (email) updateData.email = email;
+
+    await db.collection('users').doc(uid).set(updateData, { merge: true });
+
+    // Sincroniza a Role com as Custom Claims do Firebase Auth
+    await auth.setCustomUserClaims(uid, { role });
 
     return reply.code(200).send({ message: `Usuário ${name} atualizado com papel de ${role}!` });
   });

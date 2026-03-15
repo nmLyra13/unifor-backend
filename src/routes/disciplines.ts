@@ -27,8 +27,8 @@ export default async function (fastify: FastifyInstance) {
         }
     }, async (request, reply) => {
         const user = (request as any).user;
-        if (user.role !== 'professor') {
-            return reply.code(403).send({ error: 'Apenas professores podem criar disciplinas.' });
+        if (user.role !== 'professor' && user.role !== 'admin') {
+            return reply.code(403).send({ error: 'Apenas professores ou administradores podem criar disciplinas.' });
         }
 
         const body = request.body as any;

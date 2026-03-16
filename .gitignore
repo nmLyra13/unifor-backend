@@ -1,4 +1,4 @@
-node_modules
-dist
+node_modules/
+dist/
 .env
-serviceAccountKey.json
+firebase-unifor-test-45253-firebase-adminsdk-fbsvc-d34f8b703a.json

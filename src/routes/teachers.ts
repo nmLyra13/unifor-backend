@@ -43,4 +43,29 @@ export default async function (fastify: FastifyInstance) {
         });
         return reply.code(201).send({ message: 'Nota atribuída com sucesso!' });
     });
+
+    fastify.get('/teachers/grades', {
+        preHandler: [verifyToken],
+        schema: { tags: ['Professor'], description: 'Listar todas as notas lançadas' }
+    }, async (request, reply) => {
+        const user = (request as any).user;
+        if (user.role !== 'professor' && user.role !== 'admin')
+            return reply.code(403).send({ error: 'Acesso negado.' });
+
+        const snapshot = await db.collection('grades').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    });
+
+    fastify.get('/teachers/enrollments', {
+        preHandler: [verifyToken],
+        schema: { tags: ['Professor'], description: 'Listar todas as matrículas' }
+    }, async (request, reply) => {
+        const user = (request as any).user;
+        if (user.role !== 'professor' && user.role !== 'admin')
+            return reply.code(403).send({ error: 'Acesso negado.' });
+
+        const snapshot = await db.collection('enrollments').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+    );
 }

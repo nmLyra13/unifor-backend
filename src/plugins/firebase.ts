@@ -1,13 +1,19 @@
 import * as admin from 'firebase-admin';
 
-// Inicializa o Firebase Admin usando as credenciais padrão da aplicação.
-// O Node.js automaticamente enxerga o carragamento do arquivo .env configurado com o novo node --env-file.
-// O pacote firebase-admin busca a variável GOOGLE_CREDENTIALS globalmente
 if (!admin.apps.length) {
   try {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-    });
+    // Produção (Render): lê as credenciais da variável de ambiente
+    if (process.env.GOOGLE_CREDENTIALS_JSON) {
+      const serviceAccount = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    } else {
+      // Desenvolvimento local: lê do arquivo .json via GOOGLE_APPLICATION_CREDENTIALS
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+      });
+    }
     console.log('Firebase Admin inicializado com sucesso.');
   } catch (error) {
     console.error('Erro ao inicializar Firebase Admin:', error);

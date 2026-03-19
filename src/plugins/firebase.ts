@@ -2,14 +2,13 @@ import * as admin from 'firebase-admin';
 
 if (!admin.apps.length) {
   try {
-    // Produção (Render): lê as credenciais da variável de ambiente
     if (process.env.GOOGLE_CREDENTIALS_JSON) {
       const serviceAccount = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
       });
     } else {
-      // Desenvolvimento local: lê do arquivo .json via GOOGLE_APPLICATION_CREDENTIALS
       admin.initializeApp({
         credential: admin.credential.applicationDefault(),
       });
